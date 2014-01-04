@@ -76,10 +76,14 @@ static struct page_info *alloc_largest_available(unsigned long size,
 		if (max_order < orders[i])
 			continue;
 
-		gfp = GFP_KERNEL | __GFP_HIGHMEM | __GFP_COMP;
-		if (orders[i])
-			gfp |= __GFP_NOWARN;
+		gfp = __GFP_HIGHMEM;
 
+		if (orders[i]) {
+			gfp |= __GFP_COMP | __GFP_NORETRY |
+			       __GFP_NO_KSWAPD | __GFP_NOWARN;
+		} else {
+			gfp |= GFP_KERNEL;
+		}
 		page = alloc_pages(gfp, orders[i]);
 		if (!page)
 			continue;
@@ -355,8 +359,9 @@ int ion_iommu_heap_map_iommu(struct ion_buffer *buffer,
 
 	if (extra) {
 		unsigned long extra_iova_addr = data->iova_addr + buffer->size;
-		ret = msm_iommu_map_extra(domain, extra_iova_addr, extra, SZ_4K,
-					  prot);
+		unsigned long phys_addr = sg_phys(buffer->sg_table->sgl);
+		ret = msm_iommu_map_extra(domain, extra_iova_addr, phys_addr,
+					extra, SZ_4K, prot);
 		if (ret)
 			goto out2;
 	}

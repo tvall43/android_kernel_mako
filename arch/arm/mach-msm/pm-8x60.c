@@ -705,7 +705,7 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 	int64_t time = 0;
 
 	if (msm_pm_use_qtimer)
-		return sched_clock();
+		return ktime_to_ns(ktime_get());
 
 	time = msm_timer_get_sclk_time(period);
 	if (!time)
@@ -717,7 +717,7 @@ static int64_t msm_pm_timer_enter_suspend(int64_t *period)
 static int64_t msm_pm_timer_exit_suspend(int64_t time, int64_t period)
 {
 	if (msm_pm_use_qtimer)
-		return sched_clock() - time;
+		return ktime_to_ns(ktime_get()) - time;
 
 	if (time != 0) {
 		int64_t end_time = msm_timer_get_sclk_time(NULL);
@@ -768,7 +768,7 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 {
 	int i;
 	unsigned int power_usage = -1;
-	int ret = 0;
+	int ret = MSM_PM_SLEEP_MODE_NOT_SELECTED;
 	uint32_t modified_time_us = 0;
 	struct msm_pm_time_params time_param;
 
@@ -930,9 +930,14 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 		break;
 	}
 
+	case MSM_PM_SLEEP_MODE_NOT_SELECTED:
+		goto cpuidle_enter_bail;
+		break;
+
 	default:
 		__WARN();
 		goto cpuidle_enter_bail;
+		break;
 	}
 
 	time = ktime_to_ns(ktime_get()) - time;
